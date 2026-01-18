@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Profile</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .profile-edit {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #0a66c2;
+            border-bottom: 2px solid #0a66c2;
+            padding-bottom: 10px;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #0a66c2;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .experience-entry {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .experience-entry input:first-child {
+            flex: 2;
+        }
+
+        .experience-entry input:last-child {
+            flex: 1;
+        }
+
+        button {
+            background: #0a66c2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #094a8f;
+        }
+
+        .btn-secondary {
+            background: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #444;
+        }
+
+        .btn-danger {
+            background: #d32f2f;
+        }
+
+        .btn-danger:hover {
+            background: #b71c1c;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="profile-edit">
+        <h2>📝 Edit Profile</h2>
+
+        <div class="section">
+            <h3>Basic Information</h3>
+            <div class="field-group">
+                <label>First Name</label>
+                <input type="text" id="firstName" placeholder="John">
+            </div>
+            <div class="field-group">
+                <label>Last Name</label>
+                <input type="text" id="lastName" placeholder="Doe">
+            </div>
+            <div class="field-group">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="john@example.com">
+            </div>
+            <div class="field-group">
+                <label>Phone</label>
+                <input type="text" id="phone" placeholder="(555) 123-4567">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Social Links</h3>
+            <div class="field-group">
+                <label>LinkedIn</label>
+                <input type="text" id="linkedin" placeholder="linkedin.com/in/johndoe">
+            </div>
+            <div class="field-group">
+                <label>GitHub</label>
+                <input type="text" id="github" placeholder="github.com/johndoe">
+            </div>
+            <div class="field-group">
+                <label>Website</label>
+                <input type="text" id="website" placeholder="johndoe.com">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Location & Work</h3>
+            <div class="field-group">
+                <label>City</label>
+                <input type="text" id="city" placeholder="San Francisco">
+            </div>
+            <div class="field-group">
+                <label>State</label>
+                <input type="text" id="state" placeholder="CA">
+            </div>
+            <div class="field-group">
+                <label>Country</label>
+                <input type="text" id="country" placeholder="United States">
+            </div>
+            <div class="field-group">
+                <label>Current Company</label>
+                <input type="text" id="currentCompany" placeholder="Google">
+            </div>
+            <div class="field-group">
+                <label>Years of Experience</label>
+                <input type="number" id="yearsExperience" placeholder="5">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Work Authorization</h3>
+            <div class="field-group">
+                <label>Work Authorization</label>
+                <input type="text" id="workAuthorization" placeholder="US Citizen, Green Card, etc.">
+            </div>
+            <div class="field-group">
+                <label>Sponsorship Required</label>
+                <input type="text" id="sponsorship" placeholder="Yes or No">
+            </div>
+            <div class="field-group">
+                <label>Willing to Relocate</label>
+                <input type="text" id="willingToRelocate" placeholder="Yes or No">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Technology Experience (Years)</h3>
+            <div id="experienceList"></div>
+            <button type="button" class="btn-secondary" id="addExperience">+ Add Technology</button>
+        </div>
+
+        <div class="btn-group">
+            <button id="saveProfile">Save Profile</button>
+            <button class="btn-secondary" id="cancel">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // This will be populated by the extension
+        let currentProfile = null;
+        let profileId = null;
+
+        function loadProfile(profile) {
+            currentProfile = profile;
+            profileId = profile.id;
+
+            document.getElementById('firstName').value = profile.firstName || '';
+            document.getElementById('lastName').value = profile.lastName || '';
+            document.getElementById('email').value = profile.email || '';
+            document.getElementById('phone').value = profile.phone || '';
+            document.getElementById('linkedin').value = profile.linkedin || '';
+            document.getElementById('github').value = profile.github || '';
+            document.getElementById('website').value = profile.website || '';
+            document.getElementById('city').value = profile.city || '';
+            document.getElementById('state').value = profile.state || '';
+            document.getElementById('country').value = profile.country || '';
+            document.getElementById('currentCompany').value = profile.currentCompany || '';
+            document.getElementById('yearsExperience').value = profile.yearsExperience || '';
+            document.getElementById('workAuthorization').value = profile.workAuthorization || '';
+            document.getElementById('sponsorship').value = profile.sponsorship || '';
+            document.getElementById('willingToRelocate').value = profile.willingToRelocate || '';
+
+            // Load experience
+            const expList = document.getElementById('experienceList');
+            expList.innerHTML = '';
+            if (profile.experience) {
+                Object.entries(profile.experience).forEach(([tech, years]) => {
+                    addExperienceField(tech, years);
+                });
+            }
+        }
+
+        function addExperienceField(tech = '', years = '') {
+            const div = document.createElement('div');
+            div.className = 'experience-entry';
+            div.innerHTML = `
+                <input type="text" placeholder="Technology (e.g., JavaScript)" value="${tech}">
+                <input type="number" placeholder="Years" value="${years}">
+                <button type="button" class="btn-danger" onclick="this.parentElement.remove()">×</button>
+            `;
+            document.getElementById('experienceList').appendChild(div);
+        }
+
+        document.getElementById('addExperience').onclick = () => addExperienceField();
+
+        document.getElementById('saveProfile').onclick = () => {
+            const experience = {};
+            document.querySelectorAll('.experience-entry').forEach(entry => {
+                const tech = entry.children[0].value.trim();
+                const years = parseInt(entry.children[1].value);
+                if (tech && years) {
+                    experience[tech] = years;
+                }
+            });
+
+            const updatedProfile = {
+                ...currentProfile,
+                id: profileId,
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                linkedin: document.getElementById('linkedin').value,
+                github: document.getElementById('github').value,
+                website: document.getElementById('website').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                country: document.getElementById('country').value,
+                currentCompany: document.getElementById('currentCompany').value,
+                yearsExperience: parseInt(document.getElementById('yearsExperience').value) || 0,
+                workAuthorization: document.getElementById('workAuthorization').value,
+                sponsorship: document.getElementById('sponsorship').value,
+                willingToRelocate: document.getElementById('willingToRelocate').value,
+                experience: experience,
+                profileName: `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`.trim()
+            };
+
+            // Send back to extension
+            chrome.runtime.sendMessage({
+                type: 'UPDATE_PROFILE',
+                payload: updatedProfile
+            }, () => {
+                window.close();
+            });
+        };
+
+        document.getElementById('cancel').onclick = () => window.close();
+
+        // Receive profile from extension
+        chrome.runtime.onMessage.addListener((msg) => {
+            if (msg.type === 'LOAD_PROFILE') {
+                loadProfile(msg.payload);
+            }
+        });
+    </script>
+</body>
+
+</html>

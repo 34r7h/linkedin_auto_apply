@@ -1,0 +1,129 @@
+/* LinkedIn Automation Overlay Styles */
+#li-auto-overlay {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 300px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    z-index: 10000;
+    font-family: -apple-system, system-ui, sans-serif;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+#li-auto-overlay.minimized {
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+#li-auto-header {
+    background: #0a66c2;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+
+#li-auto-body {
+    padding: 16px;
+}
+
+.li-auto-btn {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    margin-bottom: 8px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 600;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.btn-primary {
+    background: #0a66c2;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #004182;
+}
+
+.btn-secondary {
+    background: white;
+    border: 1px solid #0a66c2;
+    color: #0a66c2;
+}
+
+.btn-danger {
+    background: #cf0000;
+    color: white;
+}
+
+.li-auto-status {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: #f3f2ef;
+    border-radius: 4px;
+}
+
+/* Field Assistant Popover */
+#li-field-assistant {
+    position: absolute;
+    background: white;
+    border: 1px solid #0a66c2;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    width: 320px;
+    padding: 16px;
+    z-index: 10001;
+    display: none;
+}
+
+#li-field-assistant h4 {
+    margin: 0 0 8px 0;
+    color: #0a66c2;
+    font-size: 14px;
+}
+
+#li-field-assistant p {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: #333;
+}
+
+#li-field-assistant textarea {
+    width: 100%;
+    resize: vertical;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    min-height: 60px;
+}
+
+.field-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.field-actions button {
+    flex: 1;
+    font-size: 12px;
+    padding: 6px;
+}
+
+/* Highlight active field */
+.li-auto-target {
+    outline: 2px solid #e7a33e !important;
+    background-color: rgba(231, 163, 62, 0.1) !important;
+}

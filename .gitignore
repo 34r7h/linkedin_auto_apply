@@ -1,3 +1,11 @@
 
-node_modules
+# Dependencies
+node_modules/
 
+# User Data
+user_data/
+profiles.json
+*.log
+debug_error.png
+.env
+.DS_Store

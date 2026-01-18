@@ -1,0 +1,53 @@
+{
+    "manifest_version": 3,
+    "name": "LinkedIn Auto Apply Overlay",
+    "version": "1.0",
+    "description": "Injected Overlay for Automation Control",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage"
+    ],
+    "host_permissions": [
+        "*://*.linkedin.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*.linkedin.com/*"
+            ],
+            "js": [
+                "fixer.js"
+            ],
+            "run_at": "document_start",
+            "world": "MAIN",
+            "all_frames": true
+        },
+        {
+            "matches": [
+                "*://*.linkedin.com/*"
+            ],
+            "js": [
+                "overlay.js",
+                "automation.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "overlay.css",
+                "spinner.css",
+                "icon.png",
+                "interceptor.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}
