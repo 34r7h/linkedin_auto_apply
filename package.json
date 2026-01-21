@@ -2,8 +2,9 @@
   "name": "linkedin-auto-apply",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "apply_linkedin.js",
   "scripts": {
+    "start": "node apply_linkedin.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

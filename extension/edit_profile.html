@@ -123,6 +123,86 @@
         .section:last-child {
             border-bottom: none;
         }
+
+        .qa-entry {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .qa-entry:hover {
+            border-color: #0a66c2;
+        }
+
+        .qa-entry .question-input {
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 8px;
+            background: transparent;
+            border: 1px dashed transparent;
+        }
+
+        .qa-entry .question-input:focus {
+            background: white;
+            border: 1px dashed #0a66c2;
+        }
+
+        .qa-entry .answer-input {
+            font-size: 13px;
+            color: #555;
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        .qa-entry .btn-remove {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ff5252;
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .qa-entry .btn-remove:hover {
+            background: #d32f2f;
+        }
+
+        .qa-stats {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+
+        .qa-empty {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-style: italic;
+        }
+
+        #questionCacheList {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .qa-search input {
+            width: 100%;
+        }
     </style>
 </head>
 
@@ -212,6 +292,18 @@
             <button type="button" class="btn-secondary" id="addExperience">+ Add Technology</button>
         </div>
 
+        <div class="section">
+            <h3>🧠 Question Cache (Learned Answers)</h3>
+            <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                These are answers the system has learned from previous applications. You can edit, add, or remove entries.
+            </p>
+            <div class="qa-search">
+                <input type="text" id="qaSearch" placeholder="🔍 Search questions..." style="margin-bottom: 15px;">
+            </div>
+            <div id="questionCacheList"></div>
+            <button type="button" class="btn-secondary" id="addQuestion" style="margin-top: 10px;">+ Add Question/Answer</button>
+        </div>
+
         <div class="btn-group">
             <button id="saveProfile">Save Profile</button>
             <button class="btn-secondary" id="cancel">Cancel</button>
@@ -251,6 +343,108 @@
                     addExperienceField(tech, years);
                 });
             }
+
+            // Load questionCache
+            renderQuestionCache(profile.questionCache || {});
+        }
+
+        function renderQuestionCache(cache, filter = '') {
+            const list = document.getElementById('questionCacheList');
+            const entries = Object.entries(cache);
+            
+            // Filter entries if search is active
+            const filtered = filter 
+                ? entries.filter(([q, a]) => 
+                    q.toLowerCase().includes(filter.toLowerCase()) || 
+                    a.toLowerCase().includes(filter.toLowerCase()))
+                : entries;
+
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="qa-empty">
+                        ${filter ? 'No matching questions found.' : 'No cached questions yet. They will be learned during applications.'}
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = `
+                <div class="qa-stats">
+                    📊 ${filtered.length} of ${entries.length} cached answers ${filter ? '(filtered)' : ''}
+                </div>
+            `;
+
+            filtered.forEach(([question, answer], idx) => {
+                const div = document.createElement('div');
+                div.className = 'qa-entry';
+                div.dataset.originalQuestion = question;
+                div.innerHTML = `
+                    <button type="button" class="btn-remove" onclick="removeQA(this)" title="Remove">×</button>
+                    <div class="field-group" style="margin-bottom: 8px;">
+                        <input type="text" class="question-input" value="${escapeHtml(question)}" placeholder="Question">
+                    </div>
+                    <div class="field-group" style="margin-bottom: 0;">
+                        <textarea class="answer-input" placeholder="Answer">${escapeHtml(answer)}</textarea>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function removeQA(btn) {
+            const entry = btn.closest('.qa-entry');
+            if (confirm('Remove this question/answer?')) {
+                entry.remove();
+                updateQAStats();
+            }
+        }
+
+        function updateQAStats() {
+            const entries = document.querySelectorAll('.qa-entry');
+            const stats = document.querySelector('.qa-stats');
+            if (stats) {
+                stats.textContent = `📊 ${entries.length} cached answers`;
+            }
+        }
+
+        function addQuestionField(question = '', answer = '') {
+            const list = document.getElementById('questionCacheList');
+            
+            // Remove empty message if present
+            const empty = list.querySelector('.qa-empty');
+            if (empty) empty.remove();
+            
+            // Add stats if not present
+            if (!list.querySelector('.qa-stats')) {
+                const stats = document.createElement('div');
+                stats.className = 'qa-stats';
+                stats.textContent = '📊 0 cached answers';
+                list.prepend(stats);
+            }
+
+            const div = document.createElement('div');
+            div.className = 'qa-entry';
+            div.dataset.originalQuestion = '';
+            div.innerHTML = `
+                <button type="button" class="btn-remove" onclick="removeQA(this)" title="Remove">×</button>
+                <div class="field-group" style="margin-bottom: 8px;">
+                    <input type="text" class="question-input" value="${escapeHtml(question)}" placeholder="Enter question...">
+                </div>
+                <div class="field-group" style="margin-bottom: 0;">
+                    <textarea class="answer-input" placeholder="Enter answer...">${escapeHtml(answer)}</textarea>
+                </div>
+            `;
+            list.appendChild(div);
+            updateQAStats();
+            
+            // Focus the new question input
+            div.querySelector('.question-input').focus();
         }
 
         function addExperienceField(tech = '', years = '') {
@@ -265,6 +459,26 @@
         }
 
         document.getElementById('addExperience').onclick = () => addExperienceField();
+        document.getElementById('addQuestion').onclick = () => addQuestionField();
+        
+        // Search functionality
+        document.getElementById('qaSearch').addEventListener('input', (e) => {
+            const filter = e.target.value;
+            const cache = collectQuestionCache();
+            renderQuestionCache(cache, filter);
+        });
+
+        function collectQuestionCache() {
+            const questionCache = {};
+            document.querySelectorAll('.qa-entry').forEach(entry => {
+                const question = entry.querySelector('.question-input').value.trim();
+                const answer = entry.querySelector('.answer-input').value.trim();
+                if (question) {
+                    questionCache[question] = answer;
+                }
+            });
+            return questionCache;
+        }
 
         document.getElementById('saveProfile').onclick = () => {
             const experience = {};
@@ -275,6 +489,9 @@
                     experience[tech] = years;
                 }
             });
+
+            // Collect questionCache
+            const questionCache = collectQuestionCache();
 
             const updatedProfile = {
                 ...currentProfile,
@@ -295,6 +512,7 @@
                 sponsorship: document.getElementById('sponsorship').value,
                 willingToRelocate: document.getElementById('willingToRelocate').value,
                 experience: experience,
+                questionCache: questionCache,
                 profileName: `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`.trim()
             };
 
