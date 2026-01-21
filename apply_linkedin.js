@@ -61,7 +61,7 @@ function logApplication(data) {
         try { history = JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf8')); } catch {}
     }
     history.unshift({ timestamp: new Date().toISOString(), ...data });
-    if(history.length > 200) history = history.slice(0, 200);
+    // No limit - store all applications indefinitely
     fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2));
     console.log(`[SERVER] 📝 Logged Application: ${data.title}`);
 }

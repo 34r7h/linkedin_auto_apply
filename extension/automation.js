@@ -21,7 +21,6 @@ async function startAutomation(profile, config) {
 
     try {
         let appliedCount = 0;
-        const MAX_APPLICATIONS = Infinity;
 
         // Selector for job cards in the left sidebar
         const JOB_CARD_SEL = '.jobs-search-results__list-item, .job-card-container';
@@ -60,37 +59,55 @@ async function startAutomation(profile, config) {
                 break;
             }
 
-            if (appliedCount >= MAX_APPLICATIONS) {
-                log('🎉 Reached target of 3 applications. Stopping.', 'success');
-                break;
-            }
-
             // Re-select to avoid stale elements
             const currentCards = Array.from(document.querySelectorAll(JOB_CARD_SEL));
             const card = currentCards[i];
             
             if (!card) continue;
 
+            // Check if this job card has Easy Apply indicator BEFORE clicking
+            const hasEasyApply = card.querySelector('.job-card-container__apply-method') || 
+                                 card.querySelector('[class*="easy-apply"]') ||
+                                 card.innerText.toLowerCase().includes('easy apply');
+            
+            // Skip jobs without Easy Apply badge (external applications)
+            if (!hasEasyApply) {
+                log(`⏭️ Job ${i + 1}: No Easy Apply - skipping external link`, 'info');
+                continue;
+            }
+
             // Scroll into view
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             // Click the job card
-             // Try clicking the clickable link inside
             const clickable = card.querySelector('a.job-card-container__link') || card;
             clickable.click();
             
-            log(`Processing Job ${i + 1}/${jobCards.length}...`, 'info');
+            log(`Processing Job ${i + 1}/${jobCards.length} (Easy Apply)...`, 'info');
             await delay(3000); // Wait for right pane to load
+
+            // Double-check the job detail pane has Easy Apply button
+            const applyBtn = document.querySelector('.jobs-apply-button');
+            const isEasyApply = applyBtn && (
+                applyBtn.innerText.toLowerCase().includes('easy apply') ||
+                applyBtn.querySelector('svg[data-test-icon="linkedin-bug"]') ||
+                !applyBtn.closest('a[href*="externalApply"]')
+            );
+
+            if (!isEasyApply) {
+                log(`⏭️ Job ${i + 1}: External application link - skipping`, 'info');
+                continue;
+            }
 
             // Run Job Logic
             const success = await runSingleJob(profile);
             
             if (success) {
                 appliedCount++;
-                log(`✅ Application sent! Total: ${appliedCount}/${MAX_APPLICATIONS}`, 'success');
+                log(`✅ Application sent! Total: ${appliedCount}`, 'success');
                 await delay(2000);
             } else {
-                log('⏭️ Skipping job (Not Easy Apply or Failed).', 'info');
+                log('⏭️ Skipping job (Failed or Already Applied).', 'info');
             }
         }
 
@@ -107,20 +124,38 @@ async function runSingleJob(profile) {
     try {
         const applyBtn = document.querySelector('.jobs-apply-button');
         
-        if (applyBtn) {
-            log('Found Apply Button. Clicking...', 'info');
-            applyBtn.click();
-            await delay(2000);
-            
-            // Handle Modal
-            const result = await handleModal(profile);
-            return result; // True if submitted, False if closed/failed
-        } else {
-            // Check if it says "Easy Apply" but button is missing (already applied?)
-            // Or if it is not Easy Apply
-            log('No "Easy Apply" button found.', 'warning');
+        if (!applyBtn) {
+            log('No Apply button found.', 'warning');
             return false;
         }
+
+        // Check if it's an external link (not Easy Apply)
+        const btnText = applyBtn.innerText.toLowerCase();
+        const isExternal = btnText.includes('apply') && !btnText.includes('easy apply');
+        const hasExternalLink = applyBtn.closest('a[target="_blank"]') || 
+                                applyBtn.getAttribute('data-job-id') === null;
+        
+        // Also check for "Applied" state
+        const alreadyApplied = btnText.includes('applied') || 
+                              document.querySelector('.jobs-s-apply__application-link');
+
+        if (alreadyApplied) {
+            log('Already applied to this job.', 'info');
+            return false;
+        }
+
+        if (isExternal || hasExternalLink) {
+            log('External application link detected - skipping.', 'info');
+            return false;
+        }
+
+        log('Found Easy Apply Button. Clicking...', 'info');
+        applyBtn.click();
+        await delay(2000);
+        
+        // Handle Modal
+        const result = await handleModal(profile);
+        return result; // True if submitted, False if closed/failed
     } catch (e) {
         log(`Job Error: ${e.message}`, 'error');
         return false;
@@ -205,8 +240,11 @@ async function handleModal(profile) {
                     }
                  });
 
+                 // Dismiss the success modal
                  const dismiss = document.querySelector('button[aria-label="Dismiss"]');
                  if(dismiss) dismiss.click();
+                 
+                 await delay(1000);
                  return true;
             }
             // If Review button exists alongside Submit, click Review first (usually handled by else if)

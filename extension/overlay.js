@@ -452,19 +452,37 @@ console.log('LinkedIn Auto-Apply: Overlay Script Loaded [SAFE MODE]');
 
     function renderEditUI(activeId, isNew = false) {
         const wrapper = els.wrapper;
-        let profile = isNew ? { profileName: 'New Profile', experience: { 'Skill': 1 } } : state.profiles.find(p => p.id === activeId);
+        let profile = isNew ? { profileName: 'New Profile', experience: { 'Skill': 1 }, questionCache: {} } : state.profiles.find(p => p.id === activeId);
         if (!profile) return;
+        
+        // Track current edit tab
+        state.editTab = state.editTab || 'basic';
         
         wrapper.innerHTML = `
             <div class="li-header">
                 <div class="li-logo">${isNew ? '✨ New Profile' : '✏️ Edit Profile'}</div>
                 <div class="li-minimize" id="btnCancelEdit" style="cursor:pointer;">✕</div>
             </div>
-            <div class="li-body" style="overflow-y:auto; max-height: 400px; padding-bottom: 20px;">
+            <div class="li-tabs" style="border-bottom:1px solid #eee;">
+                <div class="li-tab ${state.editTab === 'basic' ? 'active' : ''}" id="editTab-basic" style="font-size:11px;">Basic Info</div>
+                <div class="li-tab ${state.editTab === 'qa' ? 'active' : ''}" id="editTab-qa" style="font-size:11px;">Q&A Cache</div>
+            </div>
+            <div class="li-body" id="editContent" style="overflow-y:auto; max-height: 350px; padding-bottom: 20px;"></div>
+            <div style="padding:10px; border-top:1px solid #eee;">
+                <button id="btnSaveEdit" class="li-btn li-btn-primary" style="width:100%;">💾 ${isNew ? 'Create' : 'Save'}</button>
+            </div>
+        `;
+        
+        let experience = { ...(profile.experience || {}) };
+        let questionCache = { ...(profile.questionCache || {}) };
+        let qaFilter = '';
+        
+        const renderBasicTab = () => {
+            const content = wrapper.querySelector('#editContent');
+            content.innerHTML = `
                 <div class="li-section">
                     <label class="li-label">Profile Name</label>
                     <input type="text" id="editProfileName" class="li-input" value="${profile.profileName || ''}">
-                    <!-- Fields: Name, Email, Phone, LinkedIn, GitHub -->
                     <label class="li-label">First Name</label> <input type="text" id="editFirstName" class="li-input" value="${profile.firstName || ''}">
                     <label class="li-label">Last Name</label> <input type="text" id="editLastName" class="li-input" value="${profile.lastName || ''}">
                     <label class="li-label">Email</label> <input type="text" id="editEmail" class="li-input" value="${profile.email || ''}">
@@ -472,48 +490,133 @@ console.log('LinkedIn Auto-Apply: Overlay Script Loaded [SAFE MODE]');
                     <label class="li-label">LinkedIn</label> <input type="text" id="editLinkedIn" class="li-input" value="${profile.linkedin || ''}">
                     <label class="li-label">GitHub</label> <input type="text" id="editGitHub" class="li-input" value="${profile.github || ''}">
                     
-                    <label class="li-label">Skills (Name : Years)</label>
+                    <label class="li-label" style="margin-top:15px;">Skills (Name : Years)</label>
                     <div id="skillsContainer"></div>
-                    <button id="btnAddSkill" style="background:none; border:none; color:#0a66c2; cursor:pointer;">+ Add Skill</button>
+                    <button id="btnAddSkill" style="background:none; border:none; color:#0a66c2; cursor:pointer; font-size:12px;">+ Add Skill</button>
                 </div>
-                <div class="li-actions">
-                    <button id="btnSaveEdit" class="li-btn li-btn-primary">💾 ${isNew ? 'Create' : 'Save'}</button>
-                </div>
-            </div>
-        `;
-        
-        const skillsContainer = wrapper.querySelector('#skillsContainer');
-        let experience = { ...(profile.experience || {}) };
-        
-        const renderSkills = () => {
-             skillsContainer.innerHTML = '';
-             Object.entries(experience).forEach(([k,v]) => {
-                 const row = document.createElement('div');
-                 row.style.cssText = 'display:flex; gap:5px; margin-bottom:5px;';
-                 row.innerHTML = `<input class="li-input k" value="${k}" style="flex:2"> <input class="li-input v" value="${v}" style="flex:1"> <button class="x">x</button>`;
-                 row.querySelector('.x').onclick = () => { delete experience[k]; renderSkills(); };
-                 row.querySelector('.k').onchange = (e) => { const n=e.target.value; if(n!==k){ experience[n]=v; delete experience[k]; renderSkills(); }};
-                 row.querySelector('.v').onchange = (e) => experience[k] = e.target.value;
-                 skillsContainer.appendChild(row);
-             });
+            `;
+            
+            const skillsContainer = content.querySelector('#skillsContainer');
+            const renderSkills = () => {
+                skillsContainer.innerHTML = '';
+                Object.entries(experience).forEach(([k,v]) => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; gap:5px; margin-bottom:5px;';
+                    row.innerHTML = `<input class="li-input k" value="${k}" style="flex:2; font-size:11px;"> <input class="li-input v" value="${v}" style="flex:1; font-size:11px;"> <button class="x" style="background:#ff5252; color:white; border:none; border-radius:4px; cursor:pointer; padding:0 8px;">×</button>`;
+                    row.querySelector('.x').onclick = () => { delete experience[k]; renderSkills(); };
+                    row.querySelector('.k').onchange = (e) => { const n=e.target.value; if(n!==k){ experience[n]=v; delete experience[k]; renderSkills(); }};
+                    row.querySelector('.v').onchange = (e) => experience[k] = parseInt(e.target.value) || 0;
+                    skillsContainer.appendChild(row);
+                });
+            };
+            renderSkills();
+            content.querySelector('#btnAddSkill').onclick = () => { experience['New Skill'] = 1; renderSkills(); };
         };
-        renderSkills();
-        wrapper.querySelector('#btnAddSkill').onclick = () => { experience['New Skill'] = 1; renderSkills(); };
-        wrapper.querySelector('#btnCancelEdit').onclick = () => renderUI(); 
+        
+        const renderQATab = () => {
+            const content = wrapper.querySelector('#editContent');
+            const entries = Object.entries(questionCache);
+            const filtered = qaFilter 
+                ? entries.filter(([q, a]) => q.toLowerCase().includes(qaFilter.toLowerCase()) || a.toLowerCase().includes(qaFilter.toLowerCase()))
+                : entries;
+            
+            content.innerHTML = `
+                <div class="li-section">
+                    <div style="background:#e3f2fd; padding:8px 12px; border-radius:6px; margin-bottom:10px; font-size:11px; color:#1565c0;">
+                        🧠 ${filtered.length} of ${entries.length} learned answers ${qaFilter ? '(filtered)' : ''}
+                    </div>
+                    <input type="text" id="qaSearchInput" class="li-input" placeholder="🔍 Search questions..." value="${qaFilter}" style="margin-bottom:10px; font-size:11px;">
+                    <div id="qaContainer" style="max-height:220px; overflow-y:auto;"></div>
+                    <button id="btnAddQA" style="background:none; border:none; color:#0a66c2; cursor:pointer; font-size:12px; margin-top:8px;">+ Add Question/Answer</button>
+                </div>
+            `;
+            
+            const qaContainer = content.querySelector('#qaContainer');
+            
+            if (filtered.length === 0) {
+                qaContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#999; font-style:italic; font-size:12px;">
+                    ${qaFilter ? 'No matching questions.' : 'No cached answers yet.'}
+                </div>`;
+            } else {
+                filtered.forEach(([q, a]) => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'background:#f8f9fa; border:1px solid #e0e0e0; border-radius:6px; padding:8px; margin-bottom:8px; position:relative;';
+                    row.innerHTML = `
+                        <button class="qa-del" style="position:absolute; top:4px; right:4px; background:#ff5252; color:white; border:none; width:18px; height:18px; border-radius:50%; cursor:pointer; font-size:12px; line-height:1;">×</button>
+                        <input class="qa-q li-input" value="${escapeHtml(q)}" style="font-size:10px; font-weight:600; margin-bottom:4px; padding:6px;">
+                        <textarea class="qa-a li-input" style="font-size:10px; min-height:30px; padding:6px; resize:vertical;">${escapeHtml(a)}</textarea>
+                    `;
+                    row.querySelector('.qa-del').onclick = () => { delete questionCache[q]; renderQATab(); };
+                    row.querySelector('.qa-q').onchange = (e) => {
+                        const newQ = e.target.value.trim();
+                        if (newQ && newQ !== q) {
+                            questionCache[newQ] = questionCache[q];
+                            delete questionCache[q];
+                        }
+                    };
+                    row.querySelector('.qa-a').onchange = (e) => {
+                        const origQ = row.querySelector('.qa-q').value.trim();
+                        if (origQ) questionCache[origQ] = e.target.value;
+                    };
+                    qaContainer.appendChild(row);
+                });
+            }
+            
+            content.querySelector('#qaSearchInput').oninput = (e) => { qaFilter = e.target.value; renderQATab(); };
+            content.querySelector('#btnAddQA').onclick = () => { questionCache['New Question'] = ''; renderQATab(); };
+        };
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+        
+        // Tab switching
+        wrapper.querySelector('#editTab-basic').onclick = () => { state.editTab = 'basic'; renderBasicTab(); updateTabStyles(); };
+        wrapper.querySelector('#editTab-qa').onclick = () => { state.editTab = 'qa'; renderQATab(); updateTabStyles(); };
+        
+        function updateTabStyles() {
+            wrapper.querySelector('#editTab-basic').className = `li-tab ${state.editTab === 'basic' ? 'active' : ''}`;
+            wrapper.querySelector('#editTab-qa').className = `li-tab ${state.editTab === 'qa' ? 'active' : ''}`;
+        }
+        
+        // Initial render
+        if (state.editTab === 'qa') renderQATab();
+        else renderBasicTab();
+        
+        wrapper.querySelector('#btnCancelEdit').onclick = () => { state.editTab = 'basic'; renderUI(); };
         wrapper.querySelector('#btnSaveEdit').onclick = async () => {
+            // Collect current values from whichever tab is active
+            const basicFields = wrapper.querySelector('#editProfileName') ? {
+                profileName: wrapper.querySelector('#editProfileName')?.value || profile.profileName,
+                firstName: wrapper.querySelector('#editFirstName')?.value || profile.firstName,
+                lastName: wrapper.querySelector('#editLastName')?.value || profile.lastName,
+                email: wrapper.querySelector('#editEmail')?.value || profile.email,
+                phone: wrapper.querySelector('#editPhone')?.value || profile.phone,
+                linkedin: wrapper.querySelector('#editLinkedIn')?.value || profile.linkedin,
+                github: wrapper.querySelector('#editGitHub')?.value || profile.github,
+            } : {
+                profileName: profile.profileName,
+                firstName: profile.firstName,
+                lastName: profile.lastName,
+                email: profile.email,
+                phone: profile.phone,
+                linkedin: profile.linkedin,
+                github: profile.github,
+            };
+            
             const updated = {
+                ...profile,
                 id: profile.id || Date.now().toString(),
-                profileName: wrapper.querySelector('#editProfileName').value,
-                firstName: wrapper.querySelector('#editFirstName').value,
-                lastName: wrapper.querySelector('#editLastName').value,
-                email: wrapper.querySelector('#editEmail').value,
-                phone: wrapper.querySelector('#editPhone').value,
-                linkedin: wrapper.querySelector('#editLinkedIn').value,
-                github: wrapper.querySelector('#editGitHub').value,
-                experience
+                ...basicFields,
+                experience,
+                questionCache
             };
             await chrome.runtime.sendMessage({ type: 'UPDATE_PROFILE', payload: updated });
             showNotification('Saved!', 'success');
+            state.editTab = 'basic';
+            renderUI();
         };
     }
 
